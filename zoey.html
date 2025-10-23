@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Zoey AI — Enhanced</title>
+<link rel="icon" href="ZOEY.png" />
+<style>
+:root{
+  --bg:#0f1226;
+  --panel:#171726;
+  --accent:#ff6ec7;
+  --muted:#9aa0b4;
+  --user-bg:#263042;
+  --ai-bg:#1f1f30;
+  --radius:14px;
+  --glass: rgba(255,255,255,0.03);
+  color-scheme: dark;
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial;
+  color:#e6eef8;
+}
+
+/* Layout */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;background:linear-gradient(180deg,#091023 0%, #0f1226 100%);}
+
+/* Sidebar */
+.sidebar{
+  width:300px; min-width:220px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  border-right:1px solid rgba(255,255,255,0.03);
+  padding:18px; display:flex; flex-direction:column; gap:12px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:44px;height:44px;border-radius:10px;border:2px solid var(--accent)}
+.brand h1{font-size:18px;margin:0;color:var(--accent)}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+button, select{cursor:pointer}
+.new-chat-btn{
+  background:linear-gradient(135deg,var(--accent),#b067ff);
+  color:#081028;border:0;padding:10px 12px;border-radius:999px;font-weight:700;
+  box-shadow:0 6px 18px rgba(180,90,180,0.12)
+}
+.list-wrap{flex:1;overflow:auto;padding-right:6px}
+.chat-item{background:var(--glass);padding:10px;border-radius:10px;margin-bottom:8px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.chat-item.active{background:linear-gradient(90deg,rgba(255,110,199,0.12),rgba(176,103,255,0.06));border:1px solid rgba(255,110,199,0.06)}
+.small{font-size:12px;color:var(--muted)}
+
+/* Main area */
+.main{flex:1;display:flex;flex-direction:column;height:100vh}
+.header{
+  display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.02);
+  background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)
+}
+.header-left{display:flex;gap:12px;align-items:center}
+.avatar{width:46px;height:46px;border-radius:10px;overflow:hidden;border:2px solid var(--accent)}
+.header-right{display:flex;gap:8px;align-items:center}
+
+/* Chat area */
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-box{flex:1;padding:18px;overflow:auto;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg,#0b0d18 0%, transparent)}
+.typing-dots{display:inline-flex;gap:6px;align-items:center}
+.dots span{width:6px;height:6px;border-radius:99px;background:var(--accent);opacity:0.7;animation:blink 1s infinite}
+.dots span:nth-child(2){animation-delay:0.15s}
+.dots span:nth-child(3){animation-delay:0.3s}
+@keyframes blink{0%{transform:translateY(0);opacity:.9}50%{transform:translateY(-5px);opacity:.3}100%{transform:translateY(0);opacity:.9}}
+
+/* Message bubbles */
+.message{max-width:78%;padding:12px 14px;border-radius:14px;line-height:1.45;font-size:15px;word-break:break-word}
+.user{align-self:flex-end;background:var(--user-bg);border-top-right-radius:6px}
+.ai{align-self:flex-start;background:var(--ai-bg);border-top-left-radius:6px}
+.message h1,h2,h3{color:var(--accent);margin:6px 0}
+.message p{margin:6px 0}
+.message pre{background:#081018;padding:10px;border-radius:10px;overflow:auto;margin-top:8px;font-family:monospace;font-size:13px;color:#bfeadf}
+.message ul, .message ol{margin:6px 0 6px 18px}
+
+/* Input area */
+.input-area{display:flex;gap:10px;padding:12px;border-top:1px solid rgba(255,255,255,0.02);align-items:center;background:linear-gradient(180deg,transparent, rgba(255,255,255,0.01))}
+.input-area input[type="text"]{flex:1;padding:12px 14px;border-radius:999px;border:1px solid rgba(255,255,255,0.03);background:#0e1220;color:var(--muted);outline:none}
+.send-btn{background:var(--accent);border-radius:999px;padding:10px 14px;border:0;color:#081028;font-weight:700}
+.icon-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:10px;color:var(--muted)}
+
+/* bottom small */
+.footer-note{text-align:center;padding:8px;font-size:12px;color:var(--muted)}
+
+/* Responsive */
+@media (max-width:900px){
+  .sidebar{width:100%;display:flex;flex-direction:row;gap:10px;padding:8px;overflow:auto}
+  body{flex-direction:column}
+  .main{height:calc(100vh - 80px)}
+  .list-wrap{display:none}
+}
+
+/* avatars (placeholder) */
+.avatar img{width:100%;height:100%;object-fit:cover}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="avatar" id="modeAvatar"><img src="https://i.imgur.com/9b6h9qV.png" alt="Zoey"></div>
+    <div>
+      <h1>Zoey AI</h1>
+      <div class="small">Your enhanced assistant</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
+    <select id="themeSelect" title="Theme">
+      <option value="dark">Dark</option>
+      <option value="light">Light</option>
+    </select>
+    <select id="languageSelect" title="Language">
+      <option value="en">English</option>
+      <option value="fr">Français</option>
+      <option value="es">Español</option>
+      <option value="de">Deutsch</option>
+      <option value="zh">中文</option>
+    </select>
+  </div>
+
+  <div style="display:flex;gap:8px">
+    <button class="icon-btn" id="micBtn" title="Voice input">🎙️</button>
+    <button class="icon-btn" id="ttsToggle" title="Toggle speak replies">🔊</button>
+    <button class="icon-btn" id="exportBtn" title="Export chat">⬇️</button>
+    <button class="icon-btn" id="clearBtn" title="Clear chat">🧹</button>
+  </div>
+
+  <div class="small" style="margin-top:10px">Modes</div>
+  <select id="modeSelect" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:var(--muted)">
+    <option value="auto">Auto Mode 🤖</option>
+    <option value="summary">Summary ✨</option>
+    <option value="detailed">Detailed 📘</option>
+    <option value="friend">Friend 😎</option>
+    <option value="Animode">Animode 🌸</option>
+    <option value="teacher">Teacher 🧠</option>
+    <option value="ideas">Ideas 💡</option>
+    <option value="writer">Writer 📝</option>
+    <option value="codefix">Code Fix 🧩</option>
+    <option value="image">Image 🖼️</option>
+    <option value="task">Task Manager 🗓️</option>
+    <option value="data">Data Analysis 📊</option>
+  </select>
+
+  <div style="margin-top:12px">
+    <div class="small">Chats</div>
+    <div class="list-wrap" id="chatList"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="header">
+    <div class="header-left">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-weight:700">Zoey AI Assistant</div>
+        <div class="small" id="modeLabel">Auto Mode</div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="small">Voice: <span id="voiceStatus">off</span></div>
+    </div>
+  </div>
+
+  <div class="chat-area">
+    <div class="chat-box" id="chatBox" aria-live="polite">
+      <div class="message ai" id="welcomeMessage">
+        👋 Hi there! I'm <b>Zoey AI</b>. Ask me anything — I format answers with headings, lists, code blocks and more.
+      </div>
+    </div>
+
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Type a message or use quick commands like /help, /clear, /summary, /mood happy" />
+      <button class="icon-btn" id="quickCmdBtn" title="Quick commands">⚡</button>
+      <button class="icon-btn" id="imageBtn" title="Image generation">🖼️</button>
+      <button class="send-btn" id="sendBtn">Send</button>
+    </div>
+
+    <div class="footer-note">Zoey AI — remember: don't paste secrets in chat. For production move the API key to a secure backend.</div>
+  </div>
+</div>
+
+<!-- marked.js for Markdown -> HTML -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+/* ============================
+   CONFIG - Put your key here
+   ============================ */
+const OPENAI_KEY = "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"; // <-- replace before running locally
+
+/* ============================
+   State & Elements
+   ============================ */
+const chatBox = document.getElementById('chatBox');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const newChatBtn = document.getElementById('newChatBtn');
+const chatListEl = document.getElementById('chatList');
+const modeSelect = document.getElementById('modeSelect');
+const modeLabel = document.getElementById('modeLabel');
+const themeSelect = document.getElementById('themeSelect');
+const languageSelect = document.getElementById('languageSelect');
+const micBtn = document.getElementById('micBtn');
+const ttsToggle = document.getElementById('ttsToggle');
+const exportBtn = document.getElementById('exportBtn');
+const clearBtn = document.getElementById('clearBtn');
+const imageBtn = document.getElementById('imageBtn');
+const quickCmdBtn = document.getElementById('quickCmdBtn');
+const avatarImg = document.querySelector('#modeAvatar img');
+const voiceStatus = document.getElementById('voiceStatus');
+
+let chats = JSON.parse(localStorage.getItem('zoey_chats') || '[]');
+let activeChatId = chats.length ? chats[0].id : null;
+let speakReplies = JSON.parse(localStorage.getItem('zoey_tts') || 'false');
+let recognition = null;
+let isRecognizing = false;
+let modeMemories = JSON.parse(localStorage.getItem('zoey_mode_memories') || '{}'); // per-mode memory
+let avatars = {
+  auto: 'https://i.imgur.com/9b6h9qV.png',
+  summary: 'https://i.imgur.com/9b6h9qV.png',
+  detailed: 'https://i.imgur.com/9b6h9qV.png',
+  friend: 'https://i.imgur.com/AfFp7pu.png',
+  Animode: 'https://i.imgur.com/OP8QF2H.png',
+  teacher: 'https://i.imgur.com/XRrTqHk.png',
+  ideas: 'https://i.imgur.com/9b6h9qV.png',
+  writer: 'https://i.imgur.com/9b6h9qV.png',
+  codefix: 'https://i.imgur.com/1X1Xg2a.png',
+  image: 'https://i.imgur.com/nXqY6mG.png',
+  task: 'https://i.imgur.com/9b6h9qV.png',
+  data: 'https://i.imgur.com/9b6h9qV.png'
+};
+
+/* ============================
+   Utilities: render, save
+   ============================ */
+function saveState(){
+  localStorage.setItem('zoey_chats', JSON.stringify(chats));
+  localStorage.setItem('zoey_tts', JSON.stringify(speakReplies));
+  localStorage.setItem('zoey_mode_memories', JSON.stringify(modeMemories));
+}
+
+function sanitizeForSpeech(s){ return s.replace(/[*_~`#<>]/g,''); }
+
+/* Render chat list */
+function renderChatList(){
+  chatListEl.innerHTML = '';
+  chats.forEach(c=>{
+    const el = document.createElement('div');
+    el.className = 'chat-item' + (c.id===activeChatId ? ' active' : '');
+    el.innerHTML = `<div style="flex:1"><strong>${c.title||'Untitled'}</strong><div class="small">${(new Date(c.id)).toLocaleString()}</div></div>`;
+    el.addEventListener('click', ()=>{ loadChat(c.id) });
+    el.addEventListener('contextmenu', e=>{
+      e.preventDefault();
+      if(confirm('Delete chat?')){ chats = chats.filter(x=>x.id!==c.id); if(activeChatId===c.id) activeChatId = chats.length ? chats[0].id : null; saveState(); renderChatList(); if(activeChatId) loadChat(activeChatId); else chatBox.innerHTML=''; }
+    });
+    chatListEl.appendChild(el);
+  });
+}
+
+/* Load chat */
+function loadChat(id){
+  activeChatId = id;
+  saveState();
+  const chat = chats.find(c=>c.id===id);
+  chatBox.innerHTML = '';
+  (chat.messages || []).forEach(m=> appendMessage(m.role,m.text,false));
+}
+
+/* Append message to chat area and to active chat */
+function appendMessage(role, text, save=true){
+  const wrapper = document.createElement('div');
+  wrapper.className = 'message ' + (role==='user' ? 'user' : 'ai');
+  // parse Markdown
+  wrapper.innerHTML = marked.parse(text);
+  chatBox.appendChild(wrapper);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  if(save && activeChatId){
+    const chat = chats.find(c=>c.id===activeChatId);
+    chat.messages.push({role,text});
+    saveState();
+    renderChatList();
+  }
+}
+
+/* Typing animation */
+function showTyping(){
+  const el = document.createElement('div');
+  el.className = 'message ai';
+  el.id = 'zoey_typing';
+  el.innerHTML = `<div class="typing-dots"><span class="dots"><span></span><span></span><span></span></span> Zoey is thinking...</div>`;
+  chatBox.appendChild(el);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+function removeTyping(){ const t=document.getElementById('zoey_typing'); if(t) t.remove(); }
+
+/* ============================
+   Theme & Avatar & Language
+   ============================ */
+function applyTheme(t){
+  if(t==='light'){
+    document.documentElement.style.setProperty('--bg','#f4f7fb');
+    document.documentElement.style.setProperty('--panel','#ffffff');
+    document.documentElement.style.setProperty('--accent','#6b4cff');
+    document.documentElement.style.setProperty('--muted','#4b5563');
+    document.documentElement.style.setProperty('--user-bg','#e6f0ff');
+    document.documentElement.style.setProperty('--ai-bg','#f3f6ff');
+    document.documentElement.style.setProperty('color-scheme','light');
+  } else {
+    // reset to defaults (dark)
+    document.documentElement.style.removeProperty('--bg');
+    document.documentElement.style.removeProperty('--panel');
+    document.documentElement.style.removeProperty('--accent');
+    document.documentElement.style.removeProperty('--muted');
+    document.documentElement.style.removeProperty('--user-bg');
+    document.documentElement.style.removeProperty('--ai-bg');
+    document.documentElement.style.setProperty('color-scheme','dark');
+  }
+  localStorage.setItem('zoey_theme', t);
+}
+
+function updateAvatarForMode(mode){
+  avatarImg.src = avatars[mode] || avatars['auto'];
+}
+
+/* ============================
+   Quick Command Parser
+   ============================ */
+function handleQuickCommand(text){
+  const tokens = text.trim().split(/\s+/);
+  const cmd = tokens[0].toLowerCase();
+  if(cmd === '/help'){
+    appendMessage('ai', `### Quick commands\n- \`/help\` — show this help\n- \`/clear\` — clear chat messages\n- \`/export\` — download chat as .txt\n- \`/mood <word>\` — set Zoey's mood/personality\n- \`/summary\` — ask Zoey to summarize recent chat\n- \`/theme <dark|light>\` — change theme`);
+    return true;
+  }
+  if(cmd === '/clear'){
+    if(activeChatId){
+      const ch = chats.find(c=>c.id===activeChatId);
+      ch.messages=[];
+      saveState();
+      chatBox.innerHTML='';
+      appendMessage('ai','Chat cleared.');
+    }
+    return true;
+  }
+  if(cmd === '/export'){
+    exportCurrentChat();
+    return true;
+  }
+  if(cmd === '/mood'){
+    const mood = tokens.slice(1).join(' ') || 'neutral';
+    appendMessage('ai', `Mood set to **${mood}** — I will respond accordingly.`);
+    // store in mode memory
+    const mode = modeSelect.value;
+    if(!modeMemories[mode]) modeMemories[mode]={};
+    modeMemories[mode].mood = mood;
+    saveState();
+    return true;
+  }
+  if(cmd === '/summary'){
+    // request a summary of last few messages
+    summarizeRecent();
+    return true;
+  }
+  if(cmd === '/theme'){
+    const t = tokens[1] || 'dark';
+    themeSelect.value = t;
+    applyTheme(t);
+    return true;
+  }
+  return false;
+}
+
+/* ============================
+   Chat Export
+   ============================ */
+function exportCurrentChat(){
+  if(!activeChatId) return alert('No chat selected to export.');
+  const chat = chats.find(c=>c.id===activeChatId);
+  let text = `Chat: ${chat.title || 'Untitled'}\nCreated: ${new Date(chat.id)}\n\n`;
+  (chat.messages || []).forEach(m=>{
+    text += `${m.role.toUpperCase()}:\n${m.text}\n\n`;
+  });
+  const blob = new Blob([text], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `${chat.title || 'chat'}_${chat.id}.txt`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ============================
+   Image Generation (UI + call)
+   ============================ */
+async function openImagePrompt(){
+  const prompt = prompt('Enter image description (e.g. "cute neon cyberpunk fish cartoon"):');
+  if(!prompt) return;
+  appendMessage('user', `Image request: ${prompt}`);
+  showTyping();
+  try{
+    // call OpenAI image endpoint (this requires key)
+    // NOTE: For newer OpenAI image endpoints adjust as needed.
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${OPENAI_KEY}`
+      },
+      body: JSON.stringify({
+        prompt,
+        n:1,
+        size:"1024x1024"
+      })
+    });
+    const data = await res.json();
+    removeTyping();
+    if(data?.data?.[0]?.url){
+      const imageUrl = data.data[0].url;
+      appendMessage('ai', `### Generated image\n\n![generated image](${imageUrl})`);
+      // store image url in memory (mode)
+      const mode = modeSelect.value;
+      if(!modeMemories[mode]) modeMemories[mode]={images:[]};
+      modeMemories[mode].images = modeMemories[mode].images || [];
+      modeMemories[mode].images.unshift(imageUrl);
+      saveState();
+    } else if(data?.error){
+      appendMessage('ai', `⚠️ Image API error: ${data.error.message || JSON.stringify(data.error)}`);
+    } else {
+      appendMessage('ai', '⚠️ No image URL returned.');
+    }
+  }catch(err){
+    removeTyping();
+    appendMessage('ai', `⚠️ Error generating image: ${err.message}`);
+  }
+}
+
+/* ============================
+   Summarize recent
+   ============================ */
+async function summarizeRecent(){
+  if(!activeChatId) return appendMessage('ai','No chat open to summarize.');
+  const chat = chats.find(c=>c.id===activeChatId);
+  const recent = (chat.messages || []).slice(-12).map(m=>`${m.role}: ${m.text}`).join('\n');
+  showTyping();
+  try{
+    const system = buildSystemPrompt(modeSelect.value);
+    const payload = {
+      model: "gpt-4o-mini",
+      messages:[
+        {role:'system',content: system},
+        {role:'user',content: `Please give a concise 6-line summary of the following conversation:\n\n${recent}`}
+      ],
+      temperature:0.4
+    };
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST', headers:{ 'Content-Type':'application/json','Authorization':`Bearer ${OPENAI_KEY}` }, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    removeTyping();
+    const answer = data.choices?.[0]?.message?.content || 'No summary available.';
+    appendMessage('ai', answer);
+    if(speakReplies) speakText(answer);
+  }catch(err){
+    removeTyping();
+    appendMessage('ai', `⚠️ Error summarizing: ${err.message}`);
+  }
+}
+
+/* ============================
+   Build system prompt
+   ============================ */
+function buildSystemPrompt(mode){
+  const base = `You are Zoey AI — a helpful assistant. Answer using clear Markdown with headings, bullets, and code fences if needed. Keep paragraphs short.`;
+  const modes = {
+    summary: "Give short structured summaries (3–5 lines).",
+    detailed: "Explain step by step with numbered sections.",
+    friend: "Be friendly and casual but clear.",
+    Animode: "Talk about anime, worlds, characters, and be enthusiastic.",
+    teacher: "Explain like a teacher with examples and analogies.",
+    ideas: "Produce creative lists of ideas with short explanations.",
+    writer: "Write polished creative content.",
+    codefix: "Fix code and explain changes with code blocks.",
+    image: "When user asks, generate images from prompts.",
+    task: "Act as a task manager: create, list, and remind about tasks.",
+    data: "Analyze supplied data and summarize trends."
+  };
+  return base + '\n' + (modes[mode] || '');
+}
+
+/* ============================
+   Send message: main flow
+   ============================ */
+async function sendMessage(){
+  const raw = userInput.value.trim();
+  if(!raw) return;
+  // quick commands
+  if(raw.startsWith('/')){
+    const consumed = handleQuickCommand(raw);
+    userInput.value = '';
+    if(consumed) return;
+  }
+
+  appendMessage('user', raw);
+  userInput.value = '';
+
+  // per-mode memory: store user input
+  const m = modeSelect.value;
+  if(!modeMemories[m]) modeMemories[m] = {conversations:[]};
+  modeMemories[m].conversations = modeMemories[m].conversations || [];
+  modeMemories[m].conversations.push({role:'user',text:raw, time:Date.now()});
+  if(modeMemories[m].conversations.length>200) modeMemories[m].conversations.shift();
+  saveState();
+
+  // If mode = image -> open image generator
+  if(m === 'image'){
+    // open image generation UI
+    openImagePrompt();
+    return;
+  }
+
+  showTyping();
+
+  try{
+    // build prompt including mode memory summary if available
+    const memorySummary = (modeMemories[m] && modeMemories[m].conversations) ? modeMemories[m].conversations.slice(-6).map(x=>`- ${x.text}`).join('\n') : '';
+    const system = buildSystemPrompt(m);
+    const messages = [
+      {role:'system', content: system},
+      {role:'user', content: raw}
+    ];
+    // optional: include memory as assistant message
+    if(memorySummary) messages.unshift({role:'system', content:`Recent memory for mode ${m}:\n${memorySummary}`});
+
+    const payload = { model: "gpt-4o-mini", messages, temperature: 0.55, max_tokens:900 };
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json','Authorization':`Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    removeTyping();
+    const answer = data.choices?.[0]?.message?.content || 'No response.';
+    appendMessage('ai', answer);
+
+    // save memory of assistant reply too
+    modeMemories[m].conversations.push({role:'assistant',text:answer,time:Date.now()});
+    if(modeMemories[m].conversations.length>200) modeMemories[m].conversations.shift();
+    saveState();
+
+    // optional TTS
+    if(speakReplies) speakText(answer);
+  }catch(err){
+    removeTyping();
+    appendMessage('ai', `⚠️ Error: ${err.message}`);
+  }
+}
+
+/* ============================
+   Speech Recognition (Mic)
+   ============================ */
+function initRecognition(){
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) return null;
+  const r = new SpeechRecognition();
+  r.interimResults = false;
+  r.lang = languageSelect.value === 'fr'? 'fr-FR' : languageSelect.value === 'es'? 'es-ES' : languageSelect.value === 'de'? 'de-DE' : languageSelect.value === 'zh'? 'zh-CN' : 'en-US';
+  r.onresult = (e)=>{
+    const text = Array.from(e.results).map(r=>r[0].transcript).join('');
+    appendMessage('user', text);
+    // set input and auto send
+    userInput.value = text;
+    sendMessage();
+  };
+  r.onend = ()=>{ isRecognizing = false; micBtn.style.background='transparent'; };
+  return r;
+}
+
+micBtn.addEventListener('click', ()=>{
+  if(!recognition) recognition = initRecognition();
+  if(!recognition) return alert('Speech recognition not supported in this browser.');
+  if(isRecognizing){ recognition.stop(); isRecognizing=false; micBtn.style.background='transparent'; }
+  else{ recognition.lang = languageSelect.value === 'fr'? 'fr-FR' : languageSelect.value === 'es'? 'es-ES' : languageSelect.value === 'de'? 'de-DE' : languageSelect.value === 'zh'? 'zh-CN' : 'en-US'; recognition.start(); isRecognizing=true; micBtn.style.background='rgba(255,110,199,0.12)'; }
+});
+
+/* ============================
+   Text-to-Speech
+   ============================ */
+function speakText(text){
+  if(!('speechSynthesis' in window)) return;
+  const t = new SpeechSynthesisUtterance(sanitizeForSpeech(text));
+  t.lang = languageSelect.value === 'fr'? 'fr-FR' : languageSelect.value === 'es'? 'es-ES' : languageSelect.value === 'de'? 'de-DE' : languageSelect.value === 'zh'? 'zh-CN' : 'en-US';
+  // choose a default voice if available (no hard-coded voice name)
+  t.rate = 1;
+  t.pitch = 1;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(t);
+}
+
+ttsToggle.addEventListener('click', ()=>{
+  speakReplies = !speakReplies;
+  voiceStatus.textContent = speakReplies ? 'on' : 'off';
+  localStorage.setItem('zoey_tts', JSON.stringify(speakReplies));
+});
+
+/* ============================
+   Image button
+   ============================ */
+imageBtn.addEventListener('click', openImagePrompt);
+
+/* ============================
+   Quick commands UI
+   ============================ */
+quickCmdBtn.addEventListener('click', ()=>{
+  const help = `/help — quick commands\n/clear — clear chat\n/export — export chat\n/mood <word> — set mood\n/summary — summarize recent messages\n/theme <dark|light> — change theme`;
+  appendMessage('ai', `### Quick commands\n\n${help}`);
+});
+
+/* ============================
+   Export / Clear Buttons
+   ============================ */
+exportBtn.addEventListener('click', exportCurrentChat);
+clearBtn.addEventListener('click', ()=>{
+  if(!activeChatId) return;
+  if(confirm('Clear messages from current chat?')){
+    const ch = chats.find(c=>c.id===activeChatId); ch.messages=[]; saveState(); chatBox.innerHTML=''; appendMessage('ai','Chat cleared.');
+  }
+});
+
+/* ============================
+   New chat
+   ============================ */
+newChatBtn.addEventListener('click', ()=>{
+  const title = prompt('Enter chat title') || 'New Chat';
+  const id = Date.now();
+  const newChat = { id, title, messages: [] };
+  chats.unshift(newChat);
+  activeChatId = id;
+  saveState();
+  renderChatList();
+  loadChat(id);
+});
+
+/* ============================
+   Mode & language & theme changes
+   ============================ */
+modeSelect.addEventListener('change', ()=>{
+  const m = modeSelect.value;
+  modeLabel.textContent = (modeSelect.options[modeSelect.selectedIndex].text) || m;
+  updateAvatarForMode(m);
+  // make sure we have a memory entry
+  if(!modeMemories[m]) modeMemories[m] = {conversations:[]};
+  saveState();
+});
+
+languageSelect.addEventListener('change', ()=>{
+  // nothing heavy — just reflect language, recognition picks it up next time
+  appendMessage('ai', `Language set to **${languageSelect.selectedOptions[0].text}**.`);
+});
+
+themeSelect.addEventListener('change', ()=>{
+  applyTheme(themeSelect.value);
+});
+
+/* ============================
+   Init: load saved state
+   ============================ */
+(function init(){
+  // chats & active
+  if(!chats.length){
+    const id = Date.now();
+    chats = [{id, title:'Welcome Chat', messages:[{role:'ai',text:'👋 Welcome to Zoey — now with voice, image generation UI, tasks, quick commands and theme switching. Type /help to see commands.'}]}];
+    activeChatId = id;
+    saveState();
+  } else {
+    activeChatId = activeChatId || chats[0].id;
+  }
+  renderChatList();
+  loadChat(activeChatId);
+
+  // theme
+  const savedTheme = localStorage.getItem('zoey_theme') || 'dark';
+  themeSelect.value = savedTheme;
+  applyTheme(savedTheme);
+
+  // TTS
+  voiceStatus.textContent = speakReplies ? 'on' : 'off';
+
+  // avatar
+  updateAvatarForMode(modeSelect.value);
+
+  // quick send keys
+  sendBtn.addEventListener('click', sendMessage);
+  userInput.addEventListener('keypress', (e)=>{
+    if(e.key==='Enter') sendMessage();
+  });
+})();
+</script>
+</body>
